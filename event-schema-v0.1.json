@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-collab.event.v0.1",
+  "title": "Agent Collab Bus Event v0.1",
+  "description": "Minimal bus event for Flinzu-style office board. Business detail stays in module contract files; events only carry routing + gate + artifact pointers. v0.1.1: task.kind includes merchant_config; edit/approve/decline always emit a NEW event (never mutate prior event).",
+  "type": "object",
+  "required": [
+    "event_id",
+    "ts",
+    "actor",
+    "task",
+    "decision"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC"
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Stable id across a job pipeline"
+    },
+    "actor": {
+      "type": "object",
+      "required": [
+        "id",
+        "role"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "examples": [
+            "jev",
+            "scout",
+            "quill",
+            "fee-settlement"
+          ]
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "router",
+            "worker",
+            "human",
+            "system"
+          ]
+        },
+        "window": {
+          "type": "string",
+          "description": "Which runtime owns this actor",
+          "examples": [
+            "claude",
+            "codex",
+            "grok-bot",
+            "local-go"
+          ]
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "description": "Domain-agnostic verb; fee modules map their own kinds",
+          "examples": [
+            "route",
+            "research",
+            "merchant_config",
+            "settle",
+            "recharge_review",
+            "tg_notify"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "running",
+            "waiting_approval",
+            "done",
+            "failed",
+            "blocked"
+          ]
+        },
+        "parent_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "zone": {
+          "type": "string",
+          "description": "Office floor zone for viz only",
+          "examples": [
+            "QUEUE/ROUTER",
+            "RESEARCH",
+            "WRITING",
+            "REVIEW",
+            "MERCHANT_CONFIG",
+            "SETTLEMENT",
+            "NOTIFY"
+          ]
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": [
+        "type",
+        "choice",
+        "confidence",
+        "needs_human"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "choice",
+            "score",
+            "noul",
+            "none"
+          ],
+          "description": "Jev-style decision kinds; none = pure progress heartbeat"
+        },
+        "question": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Fresh menu each turn (Flinzu/Browser-Use pattern)"
+        },
+        "choice": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "threshold": {
+          "type": "number",
+          "default": 0.85
+        },
+        "needs_human": {
+          "type": "boolean"
+        },
+        "gate": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string",
+              "enum": [
+                "low_confidence",
+                "spend_money",
+                "public_action",
+                "policy",
+                "manual"
+              ]
+            },
+            "actions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "edit",
+                  "decline"
+                ]
+              },
+              "default": [
+                "approve",
+                "edit",
+                "decline"
+              ]
+            },
+            "resolved": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "approve",
+                "edit",
+                "decline",
+                null
+              ],
+              "description": "Human resolution. On approve|edit|decline, emit a NEW event with this set; do not patch the waiting_approval event in place."
+            }
+          }
+        }
+      }
+    },
+    "artifact_ref": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Pointer only — payload lives in module contract file",
+      "properties": {
+        "uri": {
+          "type": "string",
+          "description": "file:// or repo-relative path to contract artifact",
+          "examples": [
+            "contracts/fee/settlement/v0.1/deduct_run.json"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "examples": [
+            "market_signal.json",
+            "deduct_ledger.json",
+            "recharge_ticket.json",
+            "tg_message.json"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "examples": [
+            "v0.1"
+          ]
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "cost": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Optional live $/min overlay like Flinzu top bar",
+      "properties": {
+        "usd": {
+          "type": "number"
+        },
+        "tokens_in": {
+          "type": "integer"
+        },
+        "tokens_out": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "event_id": "9f3c…",
+      "ts": "2026-10-30T02:50:00Z",
+      "trace_id": "job-fee-settle-001",
+      "actor": {
+        "id": "jev",
+        "role": "router",
+        "window": "local-go"
+      },
+      "task": {
+        "id": "t-42",
+        "kind": "route",
+        "status": "waiting_approval",
+        "zone": "QUEUE/ROUTER",
+        "parent_id": null
+      },
+      "decision": {
+        "type": "choice",
+        "question": "Which worker next?",
+        "options": [
+          "fee-settlement",
+          "recharge-review",
+          "tg-notify",
+          "review"
+        ],
+        "choice": "review",
+        "confidence": 0.82,
+        "threshold": 0.85,
+        "needs_human": true,
+        "gate": {
+          "id": "g-7",
+          "reason": "low_confidence",
+          "actions": [
+            "approve",
+            "edit",
+            "decline"
+          ],
+          "resolved": null
+        }
+      },
+      "artifact_ref": {
+        "uri": "contracts/fee/settlement/v0.1/window_2026-10-30T02.json",
+        "kind": "deduct_ledger.json",
+        "version": "v0.1",
+        "sha256": null
+      },
+      "cost": {
+        "usd": 0.0004,
+        "tokens_in": 1200,
+        "tokens_out": 0
+      },
+      "_note": "After human edit/approve, publish a follow-up event; never mutate this one."
+    }
+  ]
+}
