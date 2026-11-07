@@ -5,8 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Agent Office — Collab Viz</title>
-    <script type="module" crossorigin src="./assets/index-Cm3YxDLi.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-D3L_s6_g.css">
+    <script>
+      try {
+        var k = 'office-theme'
+        var p = localStorage.getItem(k)
+        var light = window.matchMedia('(prefers-color-scheme: light)').matches
+        var theme = p === 'light' || p === 'dark' ? p : (light ? 'light' : 'dark')
+        var pref = p === 'light' || p === 'dark' || p === 'system' ? p : 'system'
+        document.documentElement.dataset.theme = theme
+        document.documentElement.dataset.themePref = pref
+      } catch (e) {}
+    </script>
+    <script type="module" crossorigin src="./assets/index-VrM7CD39.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-tTvQIseP.css">
   </head>
   <body>
     <div id="root"></div>
